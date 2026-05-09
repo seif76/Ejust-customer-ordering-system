@@ -4,6 +4,9 @@
 .env.development
 .env.production
 .env*.local
+backend/.env
+frontend/.env
+frontend/.env.local
 
 # Python
 __pycache__/
