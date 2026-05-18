@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float,ForeignKey
+from sqlalchemy.orm import relationship
 from app.db.database import Base
 
 class Product(Base):
@@ -8,3 +9,7 @@ class Product(Base):
     price = Column(Float)
     stock = Column(Integer, default=0)
     image_url = Column(String(500), nullable=True)
+
+    category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True)
+    
+    category = relationship("app.models.category_model.Category", backref="products")

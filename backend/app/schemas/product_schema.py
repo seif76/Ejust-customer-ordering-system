@@ -5,6 +5,7 @@ class ProductCreate(BaseModel):
     price: float
     stock: int
     image_url: str | None = None
+    category_id: int | None = None
 
 class ProductResponse(BaseModel):
     id: int
@@ -12,5 +13,7 @@ class ProductResponse(BaseModel):
     price: float
     stock: int
     image_url: str | None
+    category_id: int | None = None
+    
     class Config:
         from_attributes = True

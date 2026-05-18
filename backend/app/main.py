@@ -34,6 +34,7 @@ from app.db.database import Base, engine
 from app.routes.auth_routes import router as user_auth_router  # keep user auth
 from app.routes.admin_auth import router as admin_auth_router
 from app.routes.product_routes import router as product_router
+from app.routes.category_routes import router as category_router
 from app.core.startup import create_default_admin
 
 app = FastAPI()
@@ -54,6 +55,7 @@ app.add_middleware(
 app.include_router(user_auth_router)          # /auth/signup, /auth/login
 app.include_router(admin_auth_router)         # /admin/auth/login
 app.include_router(product_router)            # /products/
+app.include_router(category_router)           # /categories/
 
 @app.on_event("startup")
 async def startup():
