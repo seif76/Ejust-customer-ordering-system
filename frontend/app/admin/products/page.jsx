@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import API from "../../lib/adminAxios";
+import axios from "axios";
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]); // Stores backend products
@@ -30,19 +31,32 @@ export default function AdminProducts() {
   const [error, setError] = useState("");
   const [loadingData, setLoadingData] = useState(true);
 
-  // 📡 Sync everything from the backend on load
+ // 📡 Sync everything sequentially using direct routing links
   const fetchData = async () => {
     setLoadingData(true);
+    setError("");
     try {
-      const [categoriesRes, productsRes] = await Promise.all([
-        API.get("/categories/"),
-        API.get("/products/")
-      ]);
+      // 1. Fetch Categories using an absolute IPv4 path
+      console.log("Fetching categories directly from port 8000...");
+      const categoriesRes = await axios.get("http://127.0.0.1:8000/categories/");
       setCategories(categoriesRes.data);
-      setProducts(productsRes.data);
+      
+      // 2. Fetch Products using an absolute IPv4 path with parameters
+      console.log("Fetching products directly from port 8000...");
+      const productsRes = await axios.get("http://127.0.0.1:8000/products/?page=1&limit=100");
+      
+      // 3. Process the dataset safely
+      if (productsRes.data && Array.isArray(productsRes.data.products)) {
+        setProducts(productsRes.data.products);
+      } else if (Array.isArray(productsRes.data)) {
+        setProducts(productsRes.data);
+      } else {
+        setProducts([]);
+      }
+      
     } catch (err) {
-      console.error("Failed to sync structural datasets:", err);
-      setError("Failed to communicate with database tables during initialization.");
+      console.error("Detailed inspection error object:", err);
+      setError(`Backend Communication Error: ${err.message}`);
     } finally {
       setLoadingData(false);
     }
