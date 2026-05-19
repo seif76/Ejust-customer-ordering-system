@@ -53,43 +53,7 @@ export default function ProductCatalog() {
   return (
     <div className="flex min-h-screen bg-gray-50/50 font-sans">
       
-      {/* 🧭 SIDEBAR NAVIGATION PANEL (Exactly from your homepage markup) */}
-      <aside className="w-64 bg-neutral-900 text-white flex flex-col justify-between p-6 shadow-xl sticky top-0 h-screen">
-        <div>
-          {/* Top Brand Flag */}
-          <div className="mb-10 border-b border-neutral-800 pb-5">
-            <h2 className="font-serif text-xl font-bold tracking-tight text-white">E-JUST Store</h2>
-            <p className="text-xs text-neutral-400 mt-1">University Digital Portal</p>
-          </div>
-
-          {/* Navigation Route Map links */}
-          <nav className="space-y-2">
-            <Link 
-              href="/" 
-              className="flex items-center gap-3 px-4 py-3 text-neutral-400 hover:bg-neutral-800 hover:text-white font-medium rounded-xl text-sm transition-all"
-            >
-              <span>🏠</span> Home Dashboard
-            </Link>
-            
-            <Link 
-              href="/products" 
-              className="flex items-center gap-3 px-4 py-3 bg-neutral-800 text-white font-semibold rounded-xl text-sm transition-all"
-            >
-              <span>🛍️</span> Browse Products
-            </Link>
-          </nav>
-        </div>
-
-        {/* Admin Backdoor Short-Link Portal Footer */}
-        <div className="border-t border-neutral-800 pt-4">
-          <Link 
-            href="/admin/login" 
-            className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-400 hover:text-[#E62334] transition-colors py-2 border border-neutral-800 rounded-lg hover:border-[#E62334]"
-          >
-            🔒 Staff Login
-          </Link>
-        </div>
-      </aside>
+     
 
       {/* 🏙️ MAIN HUB STORE CATALOG VIEWPORT */}
       <main className="flex-1 p-10 max-w-6xl mx-auto">

@@ -1,13 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import API from "../../lib/adminAxios";
-import axios from "axios";
+import useCloudinaryUpload from "../../hooks/useCloudinaryUpload";
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState([]); // Stores backend products
-  const [categories, setCategories] = useState([]); // Stores backend categories
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   
-  // Create Form State
+  // Create form state
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -16,7 +16,7 @@ export default function AdminProducts() {
     category_id: "",
   });
 
-  // Modal / Edit Form State
+  // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState({
     id: null,
@@ -31,32 +31,22 @@ export default function AdminProducts() {
   const [error, setError] = useState("");
   const [loadingData, setLoadingData] = useState(true);
 
- // 📡 Sync everything sequentially using direct routing links
+  const { upload } = useCloudinaryUpload();
+
   const fetchData = async () => {
     setLoadingData(true);
     setError("");
     try {
-      // 1. Fetch Categories using an absolute IPv4 path
-      console.log("Fetching categories directly from port 8000...");
-      const categoriesRes = await axios.get("http://127.0.0.1:8000/categories/");
+      // Fetch categories (unprotected or protected – adjust as needed)
+      const categoriesRes = await API.get("/categories/");
       setCategories(categoriesRes.data);
-      
-      // 2. Fetch Products using an absolute IPv4 path with parameters
-      console.log("Fetching products directly from port 8000...");
-      const productsRes = await axios.get("http://127.0.0.1:8000/products/?page=1&limit=100");
-      
-      // 3. Process the dataset safely
-      if (productsRes.data && Array.isArray(productsRes.data.products)) {
-        setProducts(productsRes.data.products);
-      } else if (Array.isArray(productsRes.data)) {
-        setProducts(productsRes.data);
-      } else {
-        setProducts([]);
-      }
-      
+
+      // Fetch products (protected)
+      const productsRes = await API.get("/products/?page=1&limit=100");
+      setProducts(productsRes.data.products || productsRes.data || []);
     } catch (err) {
-      console.error("Detailed inspection error object:", err);
-      setError(`Backend Communication Error: ${err.message}`);
+      console.error("Fetch error:", err);
+      setError(err.response?.data?.detail || "Failed to load data");
     } finally {
       setLoadingData(false);
     }
@@ -66,17 +56,20 @@ export default function AdminProducts() {
     fetchData();
   }, []);
 
-  // Form handler for Creation Form
+  // ---- Create Form Handlers ----
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Form handler for Modal Editing Form
-  const handleEditChange = (e) => {
-    setEditingProduct({ ...editingProduct, [e.target.name]: e.target.value });
+  const handleImageUpload = async () => {
+    try {
+      const url = await upload();
+      setForm({ ...form, image_url: url });
+    } catch (err) {
+      setError("Image upload failed. Please try again.");
+    }
   };
 
-  // ➕ Create Product Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -91,13 +84,13 @@ export default function AdminProducts() {
       });
       setMessage(`Product "${res.data.name}" added successfully!`);
       setForm({ name: "", price: "", stock: "", image_url: "", category_id: "" });
-      fetchData(); // Refresh list records
+      fetchData();
     } catch (err) {
-      setError(err.response?.data?.detail || "Something went wrong while posting.");
+      setError(err.response?.data?.detail || "Something went wrong while creating product.");
     }
   };
 
-  // ✏️ Open Modal and Populate Target Data
+  // ---- Edit Modal Handlers ----
   const openEditModal = (product) => {
     setEditingProduct({
       id: product.id,
@@ -110,7 +103,19 @@ export default function AdminProducts() {
     setIsEditModalOpen(true);
   };
 
-  // 💾 Save / Push Updated Product Data
+  const handleEditChange = (e) => {
+    setEditingProduct({ ...editingProduct, [e.target.name]: e.target.value });
+  };
+
+  const handleEditImageUpload = async () => {
+    try {
+      const url = await upload();
+      setEditingProduct({ ...editingProduct, image_url: url });
+    } catch (err) {
+      setError("Image upload failed. Please try again.");
+    }
+  };
+
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -123,58 +128,52 @@ export default function AdminProducts() {
         image_url: editingProduct.image_url || null,
         category_id: editingProduct.category_id ? parseInt(editingProduct.category_id) : null,
       });
-      setMessage(`Changes saved successfully!`);
+      setMessage("Product updated successfully!");
       setIsEditModalOpen(false);
-      fetchData(); // Sync updated listing data
+      fetchData();
     } catch (err) {
-      setError(err.response?.data?.detail || "Something went wrong updating product data.");
+      setError(err.response?.data?.detail || "Failed to update product.");
     }
   };
 
-  // ❌ Delete Product
   const handleDelete = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to permanently delete "${name}"?`)) return;
+    if (!window.confirm(`Permanently delete "${name}"?`)) return;
     setMessage("");
     setError("");
     try {
       await API.delete(`/products/${id}`);
-      setMessage(`Product "${name}" deleted successfully.`);
-      fetchData(); // Sync remaining listings
+      setMessage(`Product "${name}" deleted.`);
+      fetchData();
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to drop entry row from database.");
+      setError(err.response?.data?.detail || "Delete failed.");
     }
   };
 
-  // Helper function to map a category ID to its string label for the table view
   const getCategoryName = (catId) => {
     const found = categories.find((cat) => cat.id === catId);
-    return found ? found.name : <span className="text-gray-400 font-normal">—</span>;
+    return found ? found.name : "—";
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto font-sans relative">
-      {/* Page Header */}
+    <div className="p-6 max-w-6xl mx-auto font-sans">
       <div className="mb-8 border-b border-gray-200 pb-4">
         <h1 className="font-serif text-3xl font-bold text-black">Products Management</h1>
         <p className="text-gray-500 text-sm mt-1">Catalog, inspect, and adjust campus stock items.</p>
       </div>
 
-      {/* Global Alerts */}
       {message && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-500 text-green-700 rounded-lg text-sm font-medium shadow-sm">
+        <div className="mb-6 p-4 bg-green-50 border border-green-500 text-green-700 rounded-lg text-sm font-medium">
           {message}
         </div>
       )}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-[#E62334] text-[#E62334] rounded-lg text-sm font-medium shadow-sm">
+        <div className="mb-6 p-4 bg-red-50 border border-[#E62334] text-[#E62334] rounded-lg text-sm font-medium">
           {error}
         </div>
       )}
 
-      {/* Grid Layout: Left is Submission, Right is Live Table */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-        
-        {/* PANEL A: ENTRY FORMS */}
+        {/* ---- Add New Product Panel ---- */}
         <div className="xl:col-span-1">
           <div className="bg-white rounded-xl shadow-md border-2 border-gray-100 p-5 sticky top-6">
             <h2 className="font-serif text-xl font-bold text-black mb-4">Add New Product</h2>
@@ -186,7 +185,7 @@ export default function AdminProducts() {
                   value={form.name}
                   onChange={handleChange}
                   className="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
-                  placeholder="e.g., Engineering Drafting T-Square"
+                  placeholder="Product name"
                   required
                 />
               </div>
@@ -235,48 +234,58 @@ export default function AdminProducts() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Image URL</label>
-                <input
-                  name="image_url"
-                  value={form.image_url}
-                  onChange={handleChange}
-                  className="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
-                  placeholder="https://..."
-                />
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Image</label>
+                <div className="flex gap-2">
+                  <input
+                    name="image_url"
+                    value={form.image_url}
+                    onChange={handleChange}
+                    className="w-full border-2 border-gray-100 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
+                    placeholder="https://..."
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    onClick={handleImageUpload}
+                    className="bg-gray-200 hover:bg-gray-300 text-black font-bold text-xs px-4 rounded-lg transition"
+                  >
+                    Upload
+                  </button>
+                </div>
               </div>
 
               <button
                 type="submit"
                 className="w-full bg-[#E62334] hover:bg-[#A31F2A] text-white py-2.5 rounded-lg font-bold text-sm transition shadow-sm"
               >
-                Create Product Profile
+                Create Product
               </button>
             </form>
           </div>
         </div>
 
-        {/* PANEL B: RECORDS VIEW LAYOUT */}
+        {/* ---- Products Table ---- */}
         <div className="xl:col-span-2">
           <div className="bg-white rounded-xl shadow-md border-2 border-gray-100 overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-100 border-b-2 border-gray-200">
-                  <th className="p-4 text-xs font-bold text-black uppercase tracking-wider w-16">ID</th>
-                  <th className="p-4 text-xs font-bold text-black uppercase tracking-wider">Item Name</th>
-                  <th className="p-4 text-xs font-bold text-black uppercase tracking-wider">Category</th>
-                  <th className="p-4 text-xs font-bold text-black uppercase tracking-wider">Price</th>
-                  <th className="p-4 text-xs font-bold text-black uppercase tracking-wider">Stock</th>
-                  <th className="p-4 text-xs font-bold text-black uppercase tracking-wider text-right">Actions</th>
+                  <th className="p-4 text-xs font-bold text-black uppercase w-16">ID</th>
+                  <th className="p-4 text-xs font-bold text-black uppercase">Item Name</th>
+                  <th className="p-4 text-xs font-bold text-black uppercase">Category</th>
+                  <th className="p-4 text-xs font-bold text-black uppercase">Price</th>
+                  <th className="p-4 text-xs font-bold text-black uppercase">Stock</th>
+                  <th className="p-4 text-xs font-bold text-black uppercase text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm">
                 {loadingData ? (
                   <tr>
-                    <td colSpan="6" className="p-10 text-center text-gray-400 font-medium">Loading synced records from data core...</td>
+                    <td colSpan="6" className="p-10 text-center text-gray-400">Loading products...</td>
                   </tr>
                 ) : products.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="p-10 text-center text-gray-400 font-medium">No system products match the active target index.</td>
+                    <td colSpan="6" className="p-10 text-center text-gray-400">No products found.</td>
                   </tr>
                 ) : (
                   products.map((prod) => (
@@ -295,20 +304,22 @@ export default function AdminProducts() {
                       <td className="p-4 font-medium text-gray-700">{getCategoryName(prod.category_id)}</td>
                       <td className="p-4 font-semibold text-black">{prod.price.toFixed(2)} EGP</td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${prod.stock > 10 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                          prod.stock > 10 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
                           {prod.stock} left
                         </span>
                       </td>
-                      <td className="p-4 text-right space-x-4">
+                      <td className="p-4 text-right space-x-3">
                         <button
                           onClick={() => openEditModal(prod)}
-                          className="text-black hover:text-[#E62334] font-semibold text-xs uppercase tracking-wider transition-colors"
+                          className="text-black hover:text-[#E62334] font-semibold text-xs uppercase tracking-wider"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(prod.id, prod.name)}
-                          className="text-[#E62334] hover:text-[#A31F2A] font-semibold text-xs uppercase tracking-wider transition-colors"
+                          className="text-[#E62334] hover:text-[#A31F2A] font-semibold text-xs uppercase tracking-wider"
                         >
                           Delete
                         </button>
@@ -320,23 +331,16 @@ export default function AdminProducts() {
             </table>
           </div>
         </div>
-
       </div>
 
-      {/* 🔳 POPUP EDIT MODAL (Wired to E-JUST Accent specs) */}
+      {/* ---- Edit Modal ---- */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden transform scale-100 transition-all">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-md overflow-hidden">
             <div className="bg-neutral-900 p-4 text-white flex justify-between items-center">
-              <h3 className="font-serif font-bold text-lg">Modify Product Profile</h3>
-              <button 
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors font-sans text-xl"
-              >
-                &times;
-              </button>
+              <h3 className="font-serif font-bold text-lg">Edit Product</h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-gray-400 hover:text-white text-xl">&times;</button>
             </div>
-            
             <form onSubmit={handleUpdateSubmit} className="p-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Name</label>
@@ -344,7 +348,7 @@ export default function AdminProducts() {
                   name="name"
                   value={editingProduct.name}
                   onChange={handleEditChange}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334]"
                   required
                 />
               </div>
@@ -355,7 +359,7 @@ export default function AdminProducts() {
                   name="category_id"
                   value={editingProduct.category_id}
                   onChange={handleEditChange}
-                  className="w-full border-2 border-gray-200 bg-white rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
+                  className="w-full border-2 border-gray-200 bg-white rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334]"
                 >
                   <option value="">-- Select Category (Optional) --</option>
                   {categories.map((cat) => (
@@ -373,7 +377,7 @@ export default function AdminProducts() {
                     step="0.01"
                     value={editingProduct.price}
                     onChange={handleEditChange}
-                    className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
+                    className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334]"
                     required
                   />
                 </div>
@@ -384,20 +388,31 @@ export default function AdminProducts() {
                     type="number"
                     value={editingProduct.stock}
                     onChange={handleEditChange}
-                    className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
+                    className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334]"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Image URL</label>
-                <input
-                  name="image_url"
-                  value={editingProduct.image_url}
-                  onChange={handleEditChange}
-                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334] transition"
-                />
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Image</label>
+                <div className="flex gap-2">
+                  <input
+                    name="image_url"
+                    value={editingProduct.image_url}
+                    onChange={handleEditChange}
+                    className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#E62334]"
+                    placeholder="https://..."
+                    readOnly
+                  />
+                  <button
+                    type="button"
+                    onClick={handleEditImageUpload}
+                    className="bg-gray-200 hover:bg-gray-300 text-black font-bold text-xs px-4 rounded-lg transition"
+                  >
+                    Upload
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-2">

@@ -8,6 +8,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ShoppingCart,
   Tags,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -48,6 +49,7 @@ export default function AdminLayout({ children }) {
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/products", label: "Products", icon: Package },
     { href: "/admin/categories", label: "Categories", icon: Tags },
+    { href: "/admin/orders", label: "Orders", icon: ShoppingCart }, 
   ];
 
   return (
