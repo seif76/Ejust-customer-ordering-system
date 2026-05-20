@@ -36,6 +36,7 @@ from app.routes.admin_auth import router as admin_auth_router
 from app.routes.product_routes import router as product_router
 from app.routes.category_routes import router as category_router
 from app.routes.order_routes import router as order_router
+from app.routes.dashboard_routes import router as dashboard_router
 
 from app.core.startup import create_default_admin
 
@@ -59,6 +60,8 @@ app.include_router(admin_auth_router)         # /admin/auth/login
 app.include_router(product_router)            # /products/
 app.include_router(category_router)           # /categories/
 app.include_router(order_router)
+app.include_router(dashboard_router)
+
 
 
 @app.on_event("startup")

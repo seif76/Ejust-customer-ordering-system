@@ -1,0 +1,48 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: admin-products.spec.js >> Admin can add a product
+- Location: tests\e2e\admin-products.spec.js:5:1
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded.
+```
+
+```
+Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  - navigating to "http://localhost:3000/login", waiting until "load"
+
+```
+
+# Test source
+
+```ts
+  1  | class LoginPage {
+  2  |   constructor(page) {
+  3  |     this.page = page;
+  4  |     this.emailInput = page.locator('input[type="email"]');
+  5  |     this.passwordInput = page.locator('input[type="password"]');
+  6  |     this.loginButton = page.locator('button[type="submit"]');
+  7  |   }
+  8  | 
+  9  |   async navigate() {
+> 10 |     await this.page.goto('/login');
+     |                     ^ Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+  11 |   }
+  12 | 
+  13 |   async login(email, password) {
+  14 |     await this.emailInput.fill(email);
+  15 |     await this.passwordInput.fill(password);
+  16 |     await this.loginButton.click();
+  17 |   }
+  18 | }
+  19 | module.exports = LoginPage;
+```
